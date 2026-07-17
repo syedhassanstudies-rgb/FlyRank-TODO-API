@@ -38,7 +38,7 @@ HTTP/1.1 201 Created
 
 ## Swagger UI
 
-![Swagger UI](swagger.png)
+![Swagger UI](swagger.PNG)
 
 ## Tech Stack
 
