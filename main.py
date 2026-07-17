@@ -11,7 +11,7 @@ tasks = [
 ]
 
 
-@app.get("/")
+@app.get("/", summary="Shows API info: Name,Version,Endpoints")
 def api_info():
     return {
         "name": "TODO_API",
@@ -19,15 +19,15 @@ def api_info():
         "endpoints": ["2"]
     }
 
-@app.get("/health")
+@app.get("/health", summary="Shows Health of the API")
 def return_health():
     return {"health": "API Healthy"}
 
-@app.get("/tasks")
+@app.get("/tasks", summary="Shows all the Tasks Created")
 def get_all_tasks():
     return tasks
 
-@app.get("/tasks/{id}")
+@app.get("/tasks/{id}", summary="Shows Task by ID")
 def get_tasks_by_id(id : int):
     for task in tasks:
         if task["id"] == id:
@@ -37,7 +37,7 @@ def get_tasks_by_id(id : int):
 class TaskCreate(BaseModel):
     title: str
 
-@app.post("/tasks",status_code=201)
+@app.post("/tasks",status_code=201, summary="Creates Task")
 def create_task(task: TaskCreate):
     if not task.title.strip():
         raise HTTPException(status_code=400, detail="Task Title Cannot be Empty")
@@ -56,7 +56,7 @@ class TaskUpdate(BaseModel):
     done: Optional[bool] = None
 
 
-@app.put("/tasks/{id}")
+@app.put("/tasks/{id}", summary="Update an Existing Task")
 def update_task(id :int, update: TaskUpdate):
     for task in tasks:
         if task["id"] == id:
@@ -69,7 +69,7 @@ def update_task(id :int, update: TaskUpdate):
             return task
     raise HTTPException(status_code=404, detail=f"Task {id} not found")
 
-@app.delete("/tasks/{id}", status_code=204)
+@app.delete("/tasks/{id}", status_code=204, summary="Delete an Existing task")
 def delete_task(id: int):
     for index, task in enumerate(tasks):
         if task["id"] == id:
