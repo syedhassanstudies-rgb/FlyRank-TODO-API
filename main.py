@@ -1,7 +1,6 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from typing import Optional
-
 import sqlite3
 
 def get_db():
@@ -37,20 +36,12 @@ init_db()
 
 app = FastAPI()
 
-#Tasks Data
-tasks = [
-    {"id": 1, "title": "Create a calculator", "done": False},
-    {"id": 2, "title": "Make a Game", "done": True},
-    {"id": 3, "title": "Read Documents", "done": True},
-]
-
-
 @app.get("/", summary="Shows API info: Name,Version,Endpoints")
 def api_info():
     return {
         "name": "TODO_API",
         "version": "1.0.0",
-        "endpoints": ["2"]
+        "endpoints": ["/tasks"]
     }
 
 @app.get("/health", summary="Shows Health of the API")
@@ -59,55 +50,81 @@ def return_health():
 
 @app.get("/tasks", summary="Shows all the Tasks Created")
 def get_all_tasks():
-    return tasks
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM tasks")
+    tasks = cursor.fetchall()
+    conn.close()
+    return [dict(task) for task in tasks]
 
 @app.get("/tasks/{id}", summary="Shows Task by ID")
-def get_tasks_by_id(id : int):
-    for task in tasks:
-        if task["id"] == id:
-            return task
-    raise HTTPException(status_code=404, detail=f"Task {id} not found")
-        
+def get_tasks_by_id(id: int):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM tasks WHERE id = ?", (id,))
+    task = cursor.fetchone()
+    conn.close()
+    if task is None:
+        raise HTTPException(status_code=404, detail=f"Task {id} not found")
+    return dict(task)
+
 class TaskCreate(BaseModel):
     title: str
 
-@app.post("/tasks",status_code=201, summary="Creates Task")
+@app.post("/tasks", status_code=201, summary="Creates Task")
 def create_task(task: TaskCreate):
     if not task.title.strip():
         raise HTTPException(status_code=400, detail="Task Title Cannot be Empty")
-    new_task = {
-        "id": tasks[-1]["id"] + 1,
-        "title": task.title,
-        "done": False,
-    }
-
-    tasks.append(new_task)
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute(
+        "INSERT INTO tasks (title, done) VALUES (?, ?)",
+        (task.title.strip(), 0)
+    )
+    conn.commit()
+    new_id = cursor.lastrowid
+    cursor.execute("SELECT * FROM tasks WHERE id = ?", (new_id,))
+    new_task = dict(cursor.fetchone())
+    conn.close()
     return new_task
-
 
 class TaskUpdate(BaseModel):
     title: Optional[str] = None
     done: Optional[bool] = None
 
-
 @app.put("/tasks/{id}", summary="Update an Existing Task")
-def update_task(id :int, update: TaskUpdate):
-    for task in tasks:
-        if task["id"] == id:
-            if update.title is not None:
-                if not update.title.strip():
-                    raise  HTTPException(status_code=400, detail="Task cannot be empty")
-                task["title"] = update.title
-            if update.done is not None:
-                task["done"] = update.done
-            return task
-    raise HTTPException(status_code=404, detail=f"Task {id} not found")
+def update_task(id: int, update: TaskUpdate):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM tasks WHERE id = ?", (id,))
+    task = cursor.fetchone()
+    if task is None:
+        conn.close()
+        raise HTTPException(status_code=404, detail=f"Task {id} not found")
+    if update.title is not None and not update.title.strip():
+        conn.close()
+        raise HTTPException(status_code=400, detail="Task title cannot be empty")
+    new_title = update.title.strip() if update.title is not None else task["title"]
+    new_done = int(update.done) if update.done is not None else task["done"]
+    cursor.execute(
+        "UPDATE tasks SET title = ?, done = ? WHERE id = ?",
+        (new_title, new_done, id)
+    )
+    conn.commit()
+    cursor.execute("SELECT * FROM tasks WHERE id = ?", (id,))
+    updated_task = dict(cursor.fetchone())
+    conn.close()
+    return updated_task
 
 @app.delete("/tasks/{id}", status_code=204, summary="Delete an Existing task")
 def delete_task(id: int):
-    for index, task in enumerate(tasks):
-        if task["id"] == id:
-            tasks.pop(index)
-            return
-    raise HTTPException(status_code=404, detail=f"Task {id} not found")
-        
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM tasks WHERE id = ?", (id,))
+    task = cursor.fetchone()
+    if task is None:
+        conn.close()
+        raise HTTPException(status_code=404, detail=f"Task {id} not found")
+    cursor.execute("DELETE FROM tasks WHERE id = ?", (id,))
+    conn.commit()
+    conn.close()
