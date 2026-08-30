@@ -1,14 +1,32 @@
 # Task API
 
-A simple in-memory CRUD API for managing tasks built with FastAPI and Python.
-Data lives in memory — it resets on every server restart. No database yet.
+A CRUD API for managing tasks built with FastAPI and Python.
+Storage has been migrated from SQLite (A2) to PostgreSQL hosted on Neon.
 
 ## How to Run
 
-uv run uvicorn main:app --reload
+Copy the example env file and fill in your database URL:
+
+    cp .env.example .env
+
+Start the API:
+
+    uv run uvicorn main:app --reload
+
+Or with Docker Compose:
+
+    docker compose up
 
 Server starts at http://localhost:8000
 Swagger UI at http://localhost:8000/docs
+
+## Environment Variables
+
+See `.env.example` for required variables:
+
+    DATABASE_URL=postgresql://user:password@host/dbname?sslmode=require
+
+Never commit `.env` — it is git-ignored.
 
 ## Endpoints
 
@@ -25,43 +43,37 @@ Swagger UI at http://localhost:8000/docs
 ## Validation Rules
 
 - POST and PUT reject empty or whitespace-only titles with 400
-- All errors return JSON: `{"detail": "message"}`
-
-## Example Request
-
-curl -i -X POST http://localhost:8000/tasks \
-  -H "Content-Type: application/json" \
-  -d '{"title": "Buy milk"}'
-
-HTTP/1.1 201 Created
-{"id": 4, "title": "Buy milk", "done": false}
-
-## Swagger UI
-
-![Swagger UI](swagger.PNG)
-
-## Tech Stack
-
-- Python 3.10+
-- FastAPI
-- Uvicorn
-- Pydantic v2
-- uv
-
+- All errors return JSON: {"detail": "message"}
+- All queries use parameterized placeholders (%s) — no raw user input in SQL
 
 ## Database
 
-- **Why SQLite:** Single file, zero setup, no separate server to install. 
-  Perfect for development and small projects.
-- **Database file:** `tasks.db` — created automatically on first run.
-  Not committed to Git so each clone starts fresh.
-- **DB Browser screenshot:**
+- **Engine:** PostgreSQL hosted on Neon (cloud, free tier)
+- **Why PostgreSQL over SQLite:** PostgreSQL runs as a real server, handles multiple connections, and is the same engine used in production at companies like FlyRank. SQLite is a single file — fine for local dev, not for real backends.
+- **Why Neon:** Zero local install, free tier, connects via a standard PostgreSQL connection string.
+- **Table is created automatically** on first run if it doesn't exist.
+- **Three example tasks are seeded** only when the table is empty.
 
-![DB Browser](dbrowser.png)
+## Database Screenshot
 
-## Example SQL Query
+![Database](dbrowser.png)
 
-```sql
-SELECT * FROM tasks WHERE done = 1;
-```
-Returns all completed tasks directly from the database.
+## Example Request
+
+    curl -i -X POST http://localhost:8000/tasks \
+      -H "Content-Type: application/json" \
+      -d '{"title": "Buy milk"}'
+
+    HTTP/1.1 201 Created
+    {"id": 4, "title": "Buy milk", "done": false}
+
+## Tech Stack
+
+- Python 3.11
+- FastAPI
+- Uvicorn
+- Pydantic v2
+- psycopg2
+- PostgreSQL (Neon)
+- Docker + Docker Compose
+- uv
