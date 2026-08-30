@@ -47,3 +47,21 @@ HTTP/1.1 201 Created
 - Uvicorn
 - Pydantic v2
 - uv
+
+
+## Database
+
+- **Why SQLite:** Single file, zero setup, no separate server to install. 
+  Perfect for development and small projects.
+- **Database file:** `tasks.db` — created automatically on first run.
+  Not committed to Git so each clone starts fresh.
+- **DB Browser screenshot:**
+
+![DB Browser](dbrowser.png)
+
+## Example SQL Query
+
+```sql
+SELECT * FROM tasks WHERE done = 1;
+```
+Returns all completed tasks directly from the database.
