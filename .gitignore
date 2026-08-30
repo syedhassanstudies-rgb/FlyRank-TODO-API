@@ -9,3 +9,6 @@ wheels/
 # Virtual environments
 .venv
 tasks.db
+.gitignore
+.env
+uv.lock
