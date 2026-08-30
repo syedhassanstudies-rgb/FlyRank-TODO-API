@@ -12,3 +12,4 @@ tasks.db
 .gitignore
 .env
 uv.lock
+scraper/cache
